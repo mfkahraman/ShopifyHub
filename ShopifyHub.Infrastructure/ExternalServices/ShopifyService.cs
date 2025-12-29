@@ -1,0 +1,369 @@
+﻿using ShopifyHub.Application.DTOs;
+using ShopifyHub.Application.Interfaces;
+using ShopifySharp;
+using ShopifySharp.Filters;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace ShopifyHub.Infrastructure.ExternalServices;
+
+public class ShopifyService : IShopifyIntegrationService
+{
+    private readonly string _clientId;
+    private readonly string _clientSecret;
+    private readonly string _apiVersion;
+    private readonly ILogger<ShopifyService> _logger;
+
+    public ShopifyService(IConfiguration configuration, ILogger<ShopifyService> logger)
+    {
+        _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException("Shopify:ClientId");
+        _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException("Shopify:ClientSecret");
+        _apiVersion = configuration["Shopify:ApiVersion"] ?? "2024-10";
+        _logger = logger;
+    }
+
+    #region OAuth Methods
+
+    public string GetAuthorizationUrl(string shopDomain, string redirectUri, string state)
+    {
+        var scopes = new List<string>
+        {
+            "read_products",
+            "write_products",
+            "read_orders",
+            "write_orders",
+            "read_inventory",
+            "write_inventory"
+        };
+
+        var authorizationUrl = AuthorizationService.BuildAuthorizationUrl(
+            scopes,
+            shopDomain,
+            _clientId,
+            redirectUri,
+            state
+        );
+
+        _logger.LogInformation("Generated authorization URL for shop: {ShopDomain}", shopDomain);
+
+        return authorizationUrl.ToString();
+    }
+
+    public async Task<ShopifyAuthResponseDto> ExchangeCodeForTokenAsync(string shopDomain, string code)
+    {
+        try
+        {
+            _logger.LogInformation("Exchanging authorization code for access token. Shop: {ShopDomain}", shopDomain);
+
+            // Fixed: Include all required parameters
+            var accessToken = await AuthorizationService.Authorize(
+                code,
+                shopDomain,
+                _clientId,
+                _clientSecret
+            );
+
+            _logger.LogInformation("Successfully obtained access token for shop: {ShopDomain}", shopDomain);
+
+            return new ShopifyAuthResponseDto
+            {
+                AccessToken = accessToken,
+                Scope = "read_products,write_products,read_orders,write_orders,read_inventory,write_inventory"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to exchange code for token. Shop: {ShopDomain}", shopDomain);
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region Product Methods
+
+    public async Task<List<ProductDto>> GetProductsAsync(string shopDomain, string accessToken)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching products from Shopify. Shop: {ShopDomain}", shopDomain);
+
+            var productService = new ProductService(shopDomain, accessToken);
+
+            var filter = new ProductListFilter
+            {
+                Limit = 250
+            };
+
+            var products = await productService.ListAsync(filter);
+
+            var productDtos = products.Items.Select(p => new ProductDto
+            {
+                ShopifyProductId = p.Id.Value,
+                Title = p.Title ?? string.Empty,
+                Description = p.BodyHtml ?? string.Empty,
+                Vendor = p.Vendor ?? string.Empty,
+                ProductType = p.ProductType ?? string.Empty,
+                Status = p.Status ?? "active",
+                CreatedAt = p.CreatedAt?.UtcDateTime ?? DateTime.UtcNow, // Fixed: DateTimeOffset to DateTime
+                Variants = p.Variants?.Select(v => new ProductVariantDto
+                {
+                    ShopifyVariantId = v.Id.Value,
+                    Title = v.Title ?? string.Empty,
+                    SKU = v.SKU,
+                    Price = v.Price ?? 0,
+                    CompareAtPrice = v.CompareAtPrice,
+                    InventoryQuantity = (int?)v.InventoryQuantity,
+                    Barcode = v.Barcode,
+                    RequiresShipping = v.RequiresShipping ?? true
+                }).ToList() ?? new List<ProductVariantDto>()
+            }).ToList();
+
+            _logger.LogInformation("Successfully fetched {Count} products from Shopify", productDtos.Count);
+
+            return productDtos;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch products from Shopify. Shop: {ShopDomain}", shopDomain);
+            throw;
+        }
+    }
+
+    public async Task<ProductDto?> GetProductByIdAsync(string shopDomain, string accessToken, long productId)
+    {
+        try
+        {
+            var productService = new ProductService(shopDomain, accessToken);
+            var product = await productService.GetAsync(productId);
+
+            if (product == null) return null;
+
+            return new ProductDto
+            {
+                ShopifyProductId = product.Id.Value,
+                Title = product.Title ?? string.Empty,
+                Description = product.BodyHtml ?? string.Empty,
+                Vendor = product.Vendor ?? string.Empty,
+                ProductType = product.ProductType ?? string.Empty,
+                Status = product.Status ?? "active",
+                CreatedAt = product.CreatedAt?.UtcDateTime ?? DateTime.UtcNow, // Fixed
+                Variants = product.Variants?.Select(v => new ProductVariantDto
+                {
+                    ShopifyVariantId = v.Id.Value,
+                    Title = v.Title ?? string.Empty,
+                    SKU = v.SKU,
+                    Price = v.Price ?? 0,
+                    CompareAtPrice = v.CompareAtPrice,
+                    InventoryQuantity = (int?)v.InventoryQuantity,
+                    Barcode = v.Barcode,
+                    RequiresShipping = v.RequiresShipping ?? true
+                }).ToList() ?? new List<ProductVariantDto>()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch product {ProductId} from Shopify", productId);
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateInventoryAsync(string shopDomain, string accessToken, long variantId, int quantity)
+    {
+        try
+        {
+            _logger.LogInformation("Updating inventory for variant {VariantId} to {Quantity}", variantId, quantity);
+
+            var inventoryService = new InventoryLevelService(shopDomain, accessToken);
+            var variantService = new ProductVariantService(shopDomain, accessToken);
+
+            var variant = await variantService.GetAsync(variantId);
+
+            if (variant?.InventoryItemId == null)
+            {
+                _logger.LogWarning("Variant {VariantId} has no inventory item", variantId);
+                return false;
+            }
+
+            var inventoryLevels = await inventoryService.ListAsync(new InventoryLevelListFilter
+            {
+                InventoryItemIds = new List<long> { variant.InventoryItemId.Value }
+            });
+
+            var inventoryLevel = inventoryLevels.Items.FirstOrDefault();
+
+            if (inventoryLevel?.LocationId == null)
+            {
+                _logger.LogWarning("No inventory location found for variant {VariantId}", variantId);
+                return false;
+            }
+
+            await inventoryService.SetAsync(new ShopifySharp.InventoryLevel
+            {
+                InventoryItemId = variant.InventoryItemId.Value,
+                LocationId = inventoryLevel.LocationId.Value,
+                Available = quantity
+            });
+
+            _logger.LogInformation("Successfully updated inventory for variant {VariantId}", variantId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update inventory for variant {VariantId}", variantId);
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Order Methods
+
+    public async Task<List<OrderDto>> GetOrdersAsync(string shopDomain, string accessToken, DateTime? since = null)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching orders from Shopify. Shop: {ShopDomain}", shopDomain);
+
+            var orderService = new OrderService(shopDomain, accessToken);
+
+            var filter = new OrderListFilter
+            {
+                Limit = 250,
+                Status = "any"
+            };
+
+            if (since.HasValue)
+            {
+                filter.CreatedAtMin = new DateTimeOffset(since.Value); // Fixed: DateTime to DateTimeOffset
+            }
+
+            var orders = await orderService.ListAsync(filter);
+
+            var orderDtos = orders.Items.Select(o => new OrderDto
+            {
+                ShopifyOrderId = o.Id.Value,
+                OrderNumber = o.Name ?? string.Empty,
+                Email = o.Email ?? string.Empty,
+                TotalPrice = o.TotalPrice ?? 0,
+                Currency = o.Currency ?? "USD",
+                FinancialStatus = o.FinancialStatus ?? string.Empty,
+                FulfillmentStatus = o.FulfillmentStatus ?? string.Empty,
+                CustomerName = o.Customer?.FirstName + " " + o.Customer?.LastName,
+                CreatedAt = o.CreatedAt?.UtcDateTime ?? DateTime.UtcNow, // Fixed
+                Items = o.LineItems?.Select(li => new OrderItemDto
+                {
+                    Title = li.Title ?? string.Empty,
+                    Quantity = li.Quantity ?? 0,
+                    Price = li.Price ?? 0,
+                    SKU = li.SKU
+                }).ToList() ?? new List<OrderItemDto>()
+            }).ToList();
+
+            _logger.LogInformation("Successfully fetched {Count} orders from Shopify", orderDtos.Count);
+
+            return orderDtos;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch orders from Shopify. Shop: {ShopDomain}", shopDomain);
+            throw;
+        }
+    }
+
+    public async Task<OrderDto?> GetOrderByIdAsync(string shopDomain, string accessToken, long orderId)
+    {
+        try
+        {
+            var orderService = new OrderService(shopDomain, accessToken);
+            var order = await orderService.GetAsync(orderId);
+
+            if (order == null) return null;
+
+            return new OrderDto
+            {
+                ShopifyOrderId = order.Id.Value,
+                OrderNumber = order.Name ?? string.Empty,
+                Email = order.Email ?? string.Empty,
+                TotalPrice = order.TotalPrice ?? 0,
+                Currency = order.Currency ?? "USD",
+                FinancialStatus = order.FinancialStatus ?? string.Empty,
+                FulfillmentStatus = order.FulfillmentStatus ?? string.Empty,
+                CustomerName = order.Customer?.FirstName + " " + order.Customer?.LastName,
+                CreatedAt = order.CreatedAt?.UtcDateTime ?? DateTime.UtcNow, // Fixed
+                Items = order.LineItems?.Select(li => new OrderItemDto
+                {
+                    Title = li.Title ?? string.Empty,
+                    Quantity = li.Quantity ?? 0,
+                    Price = li.Price ?? 0,
+                    SKU = li.SKU
+                }).ToList() ?? new List<OrderItemDto>()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch order {OrderId} from Shopify", orderId);
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region Webhook Methods
+
+    public async Task<bool> CreateWebhookAsync(string shopDomain, string accessToken, string topic, string address)
+    {
+        try
+        {
+            _logger.LogInformation("Creating webhook for topic {Topic}", topic);
+
+            var webhookService = new WebhookService(shopDomain, accessToken);
+
+            var webhook = await webhookService.CreateAsync(new ShopifySharp.Webhook
+            {
+                Topic = topic,
+                Address = address,
+                Format = "json"
+            });
+
+            _logger.LogInformation("Successfully created webhook {WebhookId} for topic {Topic}", webhook.Id, topic);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create webhook for topic {Topic}", topic);
+            return false;
+        }
+    }
+
+    public async Task<bool> VerifyWebhookAsync(string hmacHeader, string requestBody)
+    {
+        try
+        {
+            // Fixed: ShopifySharp expects StringValues and Stream
+            var headers = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+            {
+                { "X-Shopify-Hmac-Sha256", new Microsoft.Extensions.Primitives.StringValues(hmacHeader) }
+            };
+
+            // Convert string to Stream
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(requestBody));
+
+            var isValid = await AuthorizationService.IsAuthenticWebhook(headers, stream, _clientSecret);
+
+            if (!isValid)
+            {
+                _logger.LogWarning("Webhook HMAC verification failed");
+            }
+
+            return isValid;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying webhook HMAC");
+            return false;
+        }
+    }
+
+    #endregion
+}

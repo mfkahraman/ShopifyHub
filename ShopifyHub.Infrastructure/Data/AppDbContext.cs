@@ -22,27 +22,7 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // PostgreSQL specific: use lowercase table and column names convention
-        foreach (var entity in modelBuilder.Model.GetEntityTypes())
-        {
-            // Table names to snake_case (optional but common in PostgreSQL)
-            // entity.SetTableName(entity.GetTableName()?.ToSnakeCase());
-
-            // For now, keep PascalCase but you can enable snake_case if you prefer
-        }
-
-        // Apply all configurations from current assembly
+        // Apply all configurations
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-    }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-
-        // PostgreSQL specific optimizations
-        if (optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseSnakeCaseNamingConvention(); // Optional: converts to snake_case
-        }
     }
 }

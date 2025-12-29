@@ -6,7 +6,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 {
     public void Configure(EntityTypeBuilder<OrderItem> builder)
     {
-        builder.ToTable("order_items");
+        builder.ToTable("OrderItems");
 
         builder.HasKey(i => i.Id);
 
@@ -30,9 +30,8 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(i => i.RequiresShipping)
             .HasDefaultValue(true);
 
-        builder.HasIndex(i => i.OrderId, "ix_order_items_order_id");
-
-        builder.HasIndex(i => i.VariantId, "ix_order_items_variant_id");
+        builder.HasIndex(i => i.OrderId, "IX_OrderItems_OrderId");
+        builder.HasIndex(i => i.VariantId, "IX_OrderItems_VariantId");
 
         builder.HasOne(i => i.Variant)
             .WithMany(v => v.OrderItems)

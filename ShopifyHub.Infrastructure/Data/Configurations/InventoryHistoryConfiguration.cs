@@ -6,7 +6,7 @@ public class InventoryHistoryConfiguration : IEntityTypeConfiguration<InventoryH
 {
     public void Configure(EntityTypeBuilder<InventoryHistory> builder)
     {
-        builder.ToTable("inventory_histories");
+        builder.ToTable("InventoryHistories");
 
         builder.HasKey(h => h.Id);
 
@@ -32,12 +32,9 @@ public class InventoryHistoryConfiguration : IEntityTypeConfiguration<InventoryH
         builder.Property(h => h.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(h => h.VariantId, "ix_inventory_histories_variant_id");
-
-        builder.HasIndex(h => h.CreatedAt, "ix_inventory_histories_created_at");
-
-        builder.HasIndex(h => h.ChangeType, "ix_inventory_histories_change_type");
-
-        builder.HasIndex(h => new { h.VariantId, h.CreatedAt }, "ix_inventory_histories_variant_id_created_at");
+        builder.HasIndex(h => h.VariantId, "IX_InventoryHistories_VariantId");
+        builder.HasIndex(h => h.CreatedAt, "IX_InventoryHistories_CreatedAt");
+        builder.HasIndex(h => h.ChangeType, "IX_InventoryHistories_ChangeType");
+        builder.HasIndex(h => new { h.VariantId, h.CreatedAt }, "IX_InventoryHistories_VariantId_CreatedAt");
     }
 }

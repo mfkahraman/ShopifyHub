@@ -6,7 +6,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     public void Configure(EntityTypeBuilder<Order> builder)
     {
-        builder.ToTable("orders");
+        builder.ToTable("Orders");
 
         builder.HasKey(o => o.Id);
 
@@ -52,16 +52,11 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(o => new { o.StoreId, o.ShopifyOrderId }, "ix_orders_store_id_shopify_order_id")
-            .IsUnique();
-
-        builder.HasIndex(o => o.OrderNumber, "ix_orders_order_number");
-
-        builder.HasIndex(o => o.Email, "ix_orders_email");
-
-        builder.HasIndex(o => o.FinancialStatus, "ix_orders_financial_status");
-
-        builder.HasIndex(o => o.CreatedAt, "ix_orders_created_at");
+        builder.HasIndex(o => new { o.StoreId, o.ShopifyOrderId }, "IX_Orders_StoreId_ShopifyOrderId");
+        builder.HasIndex(o => o.OrderNumber, "IX_Orders_OrderNumber");
+        builder.HasIndex(o => o.Email, "IX_Orders_Email");
+        builder.HasIndex(o => o.FinancialStatus, "IX_Orders_FinancialStatus");
+        builder.HasIndex(o => o.CreatedAt, "IX_Orders_CreatedAt");
 
         builder.HasMany(o => o.Items)
             .WithOne(i => i.Order)

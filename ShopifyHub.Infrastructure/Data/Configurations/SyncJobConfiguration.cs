@@ -6,7 +6,7 @@ public class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
 {
     public void Configure(EntityTypeBuilder<SyncJob> builder)
     {
-        builder.ToTable("sync_jobs");
+        builder.ToTable("SyncJobs");
 
         builder.HasKey(j => j.Id);
 
@@ -34,14 +34,10 @@ public class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
         builder.Property(j => j.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(j => j.StoreId, "ix_sync_jobs_store_id");
-
-        builder.HasIndex(j => j.Status, "ix_sync_jobs_status");
-
-        builder.HasIndex(j => j.EntityType, "ix_sync_jobs_entity_type");
-
-        builder.HasIndex(j => j.CreatedAt, "ix_sync_jobs_created_at");
-
-        builder.HasIndex(j => new { j.StoreId, j.Status }, "ix_sync_jobs_store_id_status");
+        builder.HasIndex(j => j.StoreId, "IX_SyncJobs_StoreId");
+        builder.HasIndex(j => j.Status, "IX_SyncJobs_Status");
+        builder.HasIndex(j => j.EntityType, "IX_SyncJobs_EntityType");
+        builder.HasIndex(j => j.CreatedAt, "IX_SyncJobs_CreatedAt");
+        builder.HasIndex(j => new { j.StoreId, j.Status }, "IX_SyncJobs_StoreId_Status");
     }
 }

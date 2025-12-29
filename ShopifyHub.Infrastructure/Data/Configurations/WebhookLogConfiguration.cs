@@ -6,7 +6,7 @@ public class WebhookLogConfiguration : IEntityTypeConfiguration<WebhookLog>
 {
     public void Configure(EntityTypeBuilder<WebhookLog> builder)
     {
-        builder.ToTable("webhook_logs");
+        builder.ToTable("WebhookLogs");
 
         builder.HasKey(w => w.Id);
 
@@ -33,15 +33,11 @@ public class WebhookLogConfiguration : IEntityTypeConfiguration<WebhookLog>
         builder.Property(w => w.ReceivedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(w => w.Topic, "ix_webhook_logs_topic");
-
-        builder.HasIndex(w => w.IsProcessed, "ix_webhook_logs_is_processed");
-
-        builder.HasIndex(w => w.ReceivedAt, "ix_webhook_logs_received_at");
-
-        builder.HasIndex(w => new { w.Topic, w.IsProcessed }, "ix_webhook_logs_topic_is_processed");
-
-        builder.HasIndex(w => w.Payload, "ix_webhook_logs_payload")
-            .HasMethod("gin");
+        builder.HasIndex(w => w.Topic, "IX_WebhookLogs_Topic");
+        builder.HasIndex(w => w.IsProcessed, "IX_WebhookLogs_IsProcessed");
+        builder.HasIndex(w => w.ReceivedAt, "IX_WebhookLogs_ReceivedAt");
+        builder.HasIndex(w => new { w.Topic, w.IsProcessed }, "IX_WebhookLogs_Topic_IsProcessed");
+        builder.HasIndex(w => w.Payload, "IX_WebhookLogs_Payload")
+                    .HasMethod("gin");
     }
 }

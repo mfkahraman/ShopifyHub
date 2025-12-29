@@ -2,7 +2,7 @@
 
 namespace ShopifyHub.Application.Interfaces
 {
-    public interface IShopifyService
+    public interface IShopifyIntegrationService
     {
         // OAuth
         string GetAuthorizationUrl(string shopDomain, string redirectUri, string state);

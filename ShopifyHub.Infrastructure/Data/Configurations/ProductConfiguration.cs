@@ -6,7 +6,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("products");
+        builder.ToTable("Products");
 
         builder.HasKey(p => p.Id);
 
@@ -36,10 +36,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(p => new { p.StoreId, p.ShopifyProductId }, "ix_products_store_id_shopify_product_id")
-            .IsUnique();
-
-        builder.HasIndex(p => p.Status, "ix_products_status");
+        builder.HasIndex(p => new { p.StoreId, p.ShopifyProductId }, "IX_Products_StoreId_ShopifyProductId");
+        builder.HasIndex(p => p.Status, "IX_Products_Status");
 
         builder.HasMany(p => p.Variants)
             .WithOne(v => v.Product)

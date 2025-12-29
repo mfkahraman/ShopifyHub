@@ -6,7 +6,7 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
 {
     public void Configure(EntityTypeBuilder<ProductVariant> builder)
     {
-        builder.ToTable("product_variants");
+        builder.ToTable("ProductVariants");
 
         builder.HasKey(v => v.Id);
 
@@ -42,11 +42,8 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
         builder.Property(v => v.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(v => new { v.ProductId, v.ShopifyVariantId }, "ix_product_variants_product_id_shopify_variant_id")
-            .IsUnique();
-
-        builder.HasIndex(v => v.SKU, "ix_product_variants_sku");
-
-        builder.HasIndex(v => v.InventoryQuantity, "ix_product_variants_inventory_quantity");
+        builder.HasIndex(v => new { v.ProductId, v.ShopifyVariantId }, "IX_ProductVariants_ProductId_ShopifyVariantId");
+        builder.HasIndex(v => v.SKU, "IX_ProductVariants_SKU");
+        builder.HasIndex(v => v.InventoryQuantity, "IX_ProductVariants_InventoryQuantity");
     }
 }

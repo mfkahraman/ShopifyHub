@@ -8,7 +8,7 @@ public class StoreConfiguration : IEntityTypeConfiguration<Store>
 {
     public void Configure(EntityTypeBuilder<Store> builder)
     {
-        builder.ToTable("stores");
+        builder.ToTable("Stores");
 
         builder.HasKey(s => s.Id);
 
@@ -32,7 +32,7 @@ public class StoreConfiguration : IEntityTypeConfiguration<Store>
         builder.Property(s => s.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-        builder.HasIndex(s => s.ShopifyDomain, "ix_stores_shopify_domain")
+        builder.HasIndex(s => s.ShopifyDomain, "IX_Stores_ShopifyDomain")
             .IsUnique();
 
         builder.HasMany(s => s.Products)
