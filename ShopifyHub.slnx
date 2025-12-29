@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="ShopifyHub.API/ShopifyHub.API.csproj" />
+    <Project Path="ShopifyHub.Application/ShopifyHub.Application.csproj" />
+    <Project Path="ShopifyHub.Domain/ShopifyHub.Domain.csproj" />
+    <Project Path="ShopifyHub.Infrastructure/ShopifyHub.Infrastructure.csproj" />
+  </Folder>
+</Solution>

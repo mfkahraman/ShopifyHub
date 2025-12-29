@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Features\Inventory\" />
+    <Folder Include="Features\Orders\" />
+    <Folder Include="Features\Products\Commands\" />
+    <Folder Include="Features\Products\Handlers\" />
+    <Folder Include="Features\Products\Queries\" />
+    <Folder Include="DTOs\" />
+    <Folder Include="Interfaces\" />
+  </ItemGroup>
+
+</Project>
