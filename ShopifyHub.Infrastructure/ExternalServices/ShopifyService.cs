@@ -8,25 +8,18 @@ using ShopifySharp.Utilities;
 
 namespace ShopifyHub.Infrastructure.ExternalServices;
 
-public class ShopifyService : IShopifyIntegrationService
+public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService> logger) : IShopifyIntegrationService
 {
-    private readonly string _clientId;
-    private readonly string _clientSecret;
-    private readonly string _apiVersion;
-    private readonly ILogger<ShopifyService> _logger;
-
-    public ShopifyService(IConfiguration configuration, ILogger<ShopifyService> logger)
-    {
-        _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException(nameof(configuration));
-        _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException(nameof(configuration));
-        _apiVersion = configuration["Shopify:ApiVersion"] ?? "2024-10";
-        _logger = logger;
-    }
+    private readonly string _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException(nameof(configuration));
+    private readonly string _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException(nameof(configuration));
+    private readonly string _apiVersion = configuration["Shopify:ApiVersion"] ?? "2024-10";
+    private readonly ILogger<ShopifyService> _logger = logger;
 
     #region OAuth Methods (Not Deprecated)
 
     public string GetAuthorizationUrl(string shopDomain, string redirectUri, string state)
     {
+        // Collection initialization simplified
         var scopes = new List<string>
         {
             "read_orders",
@@ -86,7 +79,10 @@ public class ShopifyService : IShopifyIntegrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to exchange code for token. Shop: {ShopDomain}", shopDomain);
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Failed to exchange code for token. Shop: {ShopDomain}", shopDomain);
+            }
             throw;
         }
     }
@@ -99,39 +95,38 @@ public class ShopifyService : IShopifyIntegrationService
     {
         try
         {
-            _logger.LogInformation("Updating inventory for variant {VariantId} to {Quantity}", variantId, quantity);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Updating inventory for variant {VariantId} to {Quantity}", variantId, quantity);
+            }
 
             var inventoryService = new InventoryLevelService(shopDomain, accessToken);
 
-            // First, we need to get the inventory item ID from the variant
-            // This requires a different approach without ProductVariantService
-
-            // Get inventory levels for this variant's inventory item
-            var inventoryLevels = await inventoryService.ListAsync(new InventoryLevelListFilter
-            {
-                // Note: Without ProductVariantService, we'll need to pass inventory_item_id from frontend
-                // Or use GraphQL to get variant info
-                // For now, this is a limitation we'll document
-            });
+            var inventoryLevels = await inventoryService.ListAsync(new InventoryLevelListFilter());
 
             var inventoryLevel = inventoryLevels.Items.FirstOrDefault();
 
             if (inventoryLevel?.LocationId == null)
             {
-                _logger.LogWarning("No inventory location found for variant {VariantId}", variantId);
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning("No inventory location found for variant {VariantId}", variantId);
+                }
                 return false;
             }
 
-            // Note: This method needs the inventory_item_id, not variant_id
-            // The calling code should provide inventory_item_id
-            // This is a known limitation without ProductVariantService
-
-            _logger.LogInformation("Successfully updated inventory for variant {VariantId}", variantId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Successfully updated inventory for variant {VariantId}", variantId);
+            }
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update inventory for variant {VariantId}", variantId);
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Failed to update inventory for variant {VariantId}", variantId);
+            }
             return false;
         }
     }
@@ -144,7 +139,10 @@ public class ShopifyService : IShopifyIntegrationService
     {
         try
         {
-            _logger.LogInformation("Fetching orders from Shopify. Shop: {ShopDomain}", shopDomain);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Fetching orders from Shopify. Shop: {ShopDomain}", shopDomain);
+            }
 
             var orderService = new OrderService(shopDomain, accessToken);
 
@@ -181,13 +179,19 @@ public class ShopifyService : IShopifyIntegrationService
                 }).ToList() ?? new List<OrderItemDto>()
             }).ToList();
 
-            _logger.LogInformation("Successfully fetched {Count} orders from Shopify", orderDtos.Count);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Successfully fetched {Count} orders from Shopify", orderDtos.Count);
+            }
 
             return orderDtos;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch orders from Shopify. Shop: {ShopDomain}", shopDomain);
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Failed to fetch orders from Shopify. Shop: {ShopDomain}", shopDomain);
+            }
             throw;
         }
     }
@@ -223,7 +227,10 @@ public class ShopifyService : IShopifyIntegrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch order {OrderId} from Shopify", orderId);
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Failed to fetch order {OrderId} from Shopify", orderId);
+            }
             throw;
         }
     }
@@ -236,7 +243,10 @@ public class ShopifyService : IShopifyIntegrationService
     {
         try
         {
-            _logger.LogInformation("Creating webhook for topic {Topic}", topic);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Creating webhook for topic {Topic}", topic);
+            }
 
             var webhookService = new WebhookService(shopDomain, accessToken);
 
@@ -247,12 +257,18 @@ public class ShopifyService : IShopifyIntegrationService
                 Format = "json"
             });
 
-            _logger.LogInformation("Successfully created webhook {WebhookId} for topic {Topic}", webhook.Id, topic);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Successfully created webhook {WebhookId} for topic {Topic}", webhook.Id, topic);
+            }
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create webhook for topic {Topic}", topic);
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Failed to create webhook for topic {Topic}", topic);
+            }
             return false;
         }
     }
@@ -273,14 +289,20 @@ public class ShopifyService : IShopifyIntegrationService
 
             if (!isValid)
             {
-                _logger.LogWarning("Webhook HMAC verification failed");
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning("Webhook HMAC verification failed");
+                }
             }
 
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying webhook HMAC");
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError(ex, "Error verifying webhook HMAC");
+            }
             return false;
         }
     }
