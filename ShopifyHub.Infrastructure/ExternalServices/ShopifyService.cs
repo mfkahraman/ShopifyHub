@@ -17,8 +17,8 @@ public class ShopifyService : IShopifyIntegrationService
 
     public ShopifyService(IConfiguration configuration, ILogger<ShopifyService> logger)
     {
-        _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException("Shopify:ClientId");
-        _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException("Shopify:ClientSecret");
+        _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException(nameof(configuration));
+        _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException(nameof(configuration));
         _apiVersion = configuration["Shopify:ApiVersion"] ?? "2024-10";
         _logger = logger;
     }
@@ -47,7 +47,10 @@ public class ShopifyService : IShopifyIntegrationService
         var oauthUtility = new ShopifyOauthUtility();
         var authorizationUrl = oauthUtility.BuildAuthorizationUrl(options);
 
-        _logger.LogInformation("Generated authorization URL for shop: {ShopDomain}", shopDomain);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Generated authorization URL for shop: {ShopDomain}", shopDomain);
+        }
 
         return authorizationUrl.ToString();
     }
@@ -56,7 +59,10 @@ public class ShopifyService : IShopifyIntegrationService
     {
         try
         {
-            _logger.LogInformation("Exchanging authorization code for access token. Shop: {ShopDomain}", shopDomain);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Exchanging authorization code for access token. Shop: {ShopDomain}", shopDomain);
+            }
 
             var oauthUtility = new ShopifyOauthUtility();
 
@@ -67,7 +73,10 @@ public class ShopifyService : IShopifyIntegrationService
                 _clientSecret
             );
 
-            _logger.LogInformation("Successfully obtained access token for shop: {ShopDomain}", shopDomain);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Successfully obtained access token for shop: {ShopDomain}", shopDomain);
+            }
 
             return new ShopifyAuthResponseDto
             {
@@ -154,7 +163,7 @@ public class ShopifyService : IShopifyIntegrationService
 
             var orderDtos = orders.Items.Select(o => new OrderDto
             {
-                ShopifyOrderId = o.Id.Value,
+                ShopifyOrderId = o.Id ?? 0,
                 OrderNumber = o.Name ?? string.Empty,
                 Email = o.Email ?? string.Empty,
                 TotalPrice = o.TotalPrice ?? 0,
@@ -194,7 +203,7 @@ public class ShopifyService : IShopifyIntegrationService
 
             return new OrderDto
             {
-                ShopifyOrderId = order.Id.Value,
+                ShopifyOrderId = order.Id ?? 0,
                 OrderNumber = order.Name ?? string.Empty,
                 Email = order.Email ?? string.Empty,
                 TotalPrice = order.TotalPrice ?? 0,
