@@ -19,13 +19,13 @@ public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService
 
     public string GetAuthorizationUrl(string shopDomain, string redirectUri, string state)
     {
-        // Collection initialization simplified
+        // Scopes matching Shopify app configuration
         var scopes = new List<string>
         {
-            "read_orders",
-            "write_orders",
+            "write_inventory",
             "read_inventory",
-            "write_inventory"
+            "read_orders",
+            "write_orders"
         };
 
         var options = new AuthorizationUrlOptions
