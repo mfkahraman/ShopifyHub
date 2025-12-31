@@ -2,26 +2,19 @@
 using Microsoft.EntityFrameworkCore;
 using ShopifyHub.Application.Interfaces;
 using ShopifyHub.Infrastructure.Data;
+using System.Configuration;
 
 namespace ShopifyHub.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(IShopifyIntegrationService _shopifyService,
+                            AppDbContext _context,
+                            ILogger<AuthController> _logger,
+                            IConfiguration configuration) 
+    : ControllerBase
 {
-    private readonly IShopifyIntegrationService _shopifyService;
-    private readonly AppDbContext _context;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(
-        IShopifyIntegrationService shopifyService,
-        AppDbContext context,
-        ILogger<AuthController> logger)
-    {
-        _shopifyService = shopifyService;
-        _context = context;
-        _logger = logger;
-    }
+    private readonly string appUrl = configuration["Shopify:AppUrl"] ?? "https://paradisaical-maximally-kolton.ngrok-free.dev";
 
     [HttpGet("install")]
     public IActionResult Install([FromQuery] string shop)
@@ -43,7 +36,7 @@ public class AuthController : ControllerBase
         var state = Guid.NewGuid().ToString();
 
         // Build the OAuth authorization URL
-        var redirectUri = $"{Request.Scheme}://{Request.Host}/api/auth/callback";
+        var redirectUri = $"{appUrl}/api/auth/callback";
         var authUrl = _shopifyService.GetAuthorizationUrl(shop, redirectUri, state);
 
         _logger.LogInformation("Redirecting to Shopify authorization URL");
