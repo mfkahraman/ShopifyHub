@@ -12,10 +12,10 @@ public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService
 {
     private readonly string _clientId = configuration["Shopify:ClientId"] ?? throw new ArgumentNullException(nameof(configuration));
     private readonly string _clientSecret = configuration["Shopify:ClientSecret"] ?? throw new ArgumentNullException(nameof(configuration));
-    private readonly string _apiVersion = configuration["Shopify:ApiVersion"] ?? "2024-10";
+    private readonly string _apiVersion = configuration["Shopify:ApiVersion"] ?? "2025-10";
     private readonly ILogger<ShopifyService> _logger = logger;
 
-    #region OAuth Methods (Not Deprecated)
+    #region OAuth Methods
 
     public string GetAuthorizationUrl(string shopDomain, string redirectUri, string state)
     {
@@ -89,7 +89,7 @@ public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService
 
     #endregion
 
-    #region Inventory Methods (Not Deprecated)
+    #region Inventory Methods
 
     public async Task<bool> UpdateInventoryAsync(string shopDomain, string accessToken, long variantId, int quantity)
     {
@@ -133,7 +133,7 @@ public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService
 
     #endregion
 
-    #region Order Methods (Not Deprecated)
+    #region Order Methods
 
     public async Task<List<OrderDto>> GetOrdersAsync(string shopDomain, string accessToken, DateTime? since = null)
     {
@@ -237,7 +237,7 @@ public class ShopifyService(IConfiguration configuration, ILogger<ShopifyService
 
     #endregion
 
-    #region Webhook Methods (Not Deprecated)
+    #region Webhook Methods
 
     public async Task<bool> CreateWebhookAsync(string shopDomain, string accessToken, string topic, string address)
     {
