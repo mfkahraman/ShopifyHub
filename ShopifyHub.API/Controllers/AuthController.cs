@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShopifyHub.Application.Interfaces;
 using ShopifyHub.Infrastructure.Data;
-using System.Configuration;
 
 namespace ShopifyHub.API.Controllers;
 
