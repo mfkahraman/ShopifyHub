@@ -67,9 +67,9 @@ namespace ShopifyHub.API.Controllers
                             Inventory = v.InventoryHistories != null ? new
                             {
                                 v.InventoryHistories.Quantity,
-                                v.Inventory.ReservedQuantity,
-                                Available = v.Inventory.Quantity - v.Inventory.ReservedQuantity,
-                                v.Inventory.LastSyncedAt
+                                v.InventoryHistories.ReservedQuantity,
+                                Available = v.InventoryHistories.Quantity - v.InventoryHistories.ReservedQuantity,
+                                v.InventoryHistories.LastSyncedAt
                             } : null
                         }).ToList()
                     })
@@ -82,6 +82,24 @@ namespace ShopifyHub.API.Controllers
                     pagination = new
                     {
                         page,
+                        // Replace this block inside the Select for Variants:
+                        Variants = p.Variants.Select(v => new
+                        {
+                            v.Id,
+                            v.ShopifyVariantId,
+                            v.Title,
+                            v.SKU,
+                            v.Price,
+                            v.CompareAtPrice,
+                            v.Barcode,
+                            Inventory = v.InventoryHistories != null && v.InventoryHistories.Any() ? new
+                            {
+                                Quantity = v.InventoryHistories.OrderByDescending(h => h.CreatedAt).FirstOrDefault().NewQuantity,
+                                v.Inventory.ReservedQuantity,
+                                Available = v.Inventory.Quantity - v.Inventory.ReservedQuantity,
+                                v.Inventory.LastSyncedAt
+                            } : null
+                        }).ToList()
                         pageSize,
                         totalCount,
                         totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
